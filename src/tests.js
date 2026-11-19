@@ -54,7 +54,7 @@ function runTestCases_(cases) {
   return cases.map(c => {
     let out = { reply: '', flags: [], answer_type: '' };
     try {
-      const start = startChat(c.emp, !!c.guest, true);
+      const start = startChat_(c.emp, !!c.guest, true);
       if (!start.ok) throw new Error(start.error);
       c.turns.forEach(t => { out = chat(start.sessionId, t); });
     } catch (e) {
@@ -82,6 +82,7 @@ function expected_(c) {
 
 /** Sheet menu: HR Bot > Run tests. Writes the Results tab. */
 function runTests() {
+  const ui = SpreadsheetApp.getUi(); // throws outside the Sheet, so web visitors can't trigger a paid test run
   const rows = runTestCases_(TEST_CASES);
   const sheet = book_().getSheetByName('Results') || book_().insertSheet('Results');
   sheet.clear();
@@ -92,5 +93,5 @@ function runTests() {
   sheet.getRange(rows.length + 3, 1, 1, 2).setValues([['Score', `${passed}/${rows.length}  (${new Date()})`]]).setFontWeight('bold');
   sheet.setFrozenRows(1);
   sheet.setColumnWidth(5, 420);
-  try { SpreadsheetApp.getUi().alert(`Tests: ${passed}/${rows.length} passed. See the Results tab.`); } catch (e) { /* run from editor */ }
+  ui.alert(`Tests: ${passed}/${rows.length} passed. See the Results tab.`);
 }

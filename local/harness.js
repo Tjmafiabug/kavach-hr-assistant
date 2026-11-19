@@ -72,7 +72,7 @@ if (mode === 'md') { // markdown results table, e.g. node local/harness.js md S1
   }
   console.log(`\nScore: ${pass}/${cases.length}`);
 } else if (mode === 'chat') {
-  const start = ctx.startChat(args[0] || '', args[1] === 'guest', true);
+  const start = ctx.startChat_(args[0] || '', args[1] === 'guest', true);
   console.log(start.greeting || start.error);
   if (!start.ok) process.exit(1);
   const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout, prompt: '\nyou> ' });

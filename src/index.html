@@ -3,6 +3,8 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kavach HR Assistant</title>
 <style>
   :root { --ink:#1b2430; --muted:#5b6675; --line:#dde3ea; --bg:#f4f6f9; --card:#fff; --brand:#0f5c6e; --brand-ink:#fff; --bot:#eef3f6; --warn:#7a4b00; --warn-bg:#fff6e5; }
   * { box-sizing: border-box; }
@@ -51,7 +53,6 @@
     </form>
     <p class="error" id="idError" role="alert"></p>
     <button class="link" id="guestBtn" type="button" hidden>Continue as guest</button>
-    <p class="hint">Not responding? Open this link in an Incognito window (a Google issue when several Google accounts are signed in).</p>
   </section>
 
   <section id="chat">
@@ -66,6 +67,16 @@
 <script>
   const $ = id => document.getElementById(id);
   let sessionId = null;
+
+  // Served by Apps Script → google.script.run. Served anywhere else (GitHub Pages) → plain fetch to doPost,
+  // which sends no Google cookies and so avoids Google's multi-account "Page not found" bug.
+  const API = 'https://script.google.com/macros/s/AKfycbxSurlrcpDyEFG5yN5Ydi05PbGfsdI7Lfu-WUzjgLG_bozFls-VfY8ZE65XUWKc-9te/exec';
+  function call(fn, ...args) {
+    if (window.google && google.script && google.script.run) {
+      return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
+    }
+    return fetch(API, { method: 'POST', body: JSON.stringify({ fn, args }) }).then(r => r.json());
+  }
 
   // All bot/user text goes in via textContent, never innerHTML (no XSS from chat text).
   function add(text, cls) {
@@ -93,8 +104,8 @@
     if (!id) return;
     $('startBtn').disabled = true;
     $('idError').textContent = '';
-    google.script.run
-      .withSuccessHandler(r => {
+    call('startChat', id, asGuest)
+      .then(r => {
         $('startBtn').disabled = false;
         if (!r.ok) { $('idError').textContent = r.error; $('guestBtn').hidden = !r.notFound; return; }
         sessionId = r.sessionId;
@@ -106,8 +117,7 @@
         add(r.greeting, 'bot');
         $('msg').focus();
       })
-      .withFailureHandler(e => { $('startBtn').disabled = false; $('idError').textContent = 'Something went wrong: ' + e.message; })
-      .startChat(id, asGuest);
+      .catch(e => { $('startBtn').disabled = false; $('idError').textContent = 'Something went wrong: ' + e.message; });
   }
 
   $('idForm').addEventListener('submit', e => { e.preventDefault(); start(false); });
@@ -122,20 +132,19 @@
     $('msg').value = '';
     $('sendBtn').disabled = true;
     const typing = add('Checking the policy…', 'bot typing');
-    google.script.run
-      .withSuccessHandler(r => {
+    call('chat', sessionId, text)
+      .then(r => {
         typing.remove();
         $('sendBtn').disabled = false;
         if (r.expired) { showLogin(r.reply); return; }
         if (r.reply) add(r.reply, 'bot');
         $('msg').focus();
       })
-      .withFailureHandler(err => {
+      .catch(err => {
         typing.remove();
         $('sendBtn').disabled = false;
         add('Sorry, something went wrong (' + err.message + '). Please try again.', 'bot');
-      })
-      .chat(sessionId, text);
+      });
   });
 </script>
 </body>

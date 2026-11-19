@@ -4,9 +4,9 @@ A chat assistant that answers Kavach Insurtech employees' HR questions **only fr
 
 Built as a **Google Apps Script web app bound to a Google Sheet**, with one LLM call per message through OpenRouter (`openai/gpt-6-luna`, strict JSON output).
 
-- **Live chat:** https://script.google.com/macros/s/AKfycbxSurlrcpDyEFG5yN5Ydi05PbGfsdI7Lfu-WUzjgLG_bozFls-VfY8ZE65XUWKc-9te/exec
+- **Live chat:** https://tjmafiabug.github.io/kavach-hr-assistant/
   Try `KV1003` vs `KV1021` → "What is my notice period?" (90 vs 15 days).
-  If the page doesn't respond, open it in an Incognito window (a known Google issue when several Google accounts are signed in to one browser).
+  The page calls the Apps Script backend with a plain `fetch` (no Google login involved). The same page is also served directly by Apps Script at https://script.google.com/macros/s/AKfycbxSurlrcpDyEFG5yN5Ydi05PbGfsdI7Lfu-WUzjgLG_bozFls-VfY8ZE65XUWKc-9te/exec, but Google breaks that link for browsers signed in to several Google accounts ("Page not found"), so the GitHub Pages link is the reliable one.
 - **Design note:** [`docs/design-note.pdf`](docs/design-note.pdf)
 - **Results on the 6 sample questions:** [`docs/sample-results.md`](docs/sample-results.md)
 
@@ -29,7 +29,8 @@ index.html ──google.script.run──> Code.js
 | File | What it is |
 |---|---|
 | `src/Code.js` | Server: web app, decision flow, guards, templates, LLM call, logging, Sheet setup |
-| `src/index.html` | Chat page (Employee ID screen → chat) |
+| `src/index.html` | Chat page (Employee ID screen → chat). Uses `google.script.run` when served by Apps Script, `fetch` → `doPost` anywhere else |
+| `docs/index.html` | Copy of `src/index.html` served by GitHub Pages (`cp src/index.html docs/` after edits) |
 | `src/tests.js` | 30 test cases (6 samples + policy traps) and the `runTests` Sheet menu item |
 | `src/policy.js` | The policy pack, verbatim, as a string constant |
 | `src/roster.js` | The roster CSV, verbatim — only used by Setup to fill the Roster tab |
