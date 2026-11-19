@@ -1,0 +1,17 @@
+# secrets
+.env
+.clasprc.json
+
+# personal / assignment files — not part of the submission repo
+NOTES.md
+plan.md
+beastlife*
+*.pdf
+!docs/design-note.pdf
+*.zip
+attachments/
+
+# tooling
+.code-review-graph/
+.DS_Store
+node_modules/
