@@ -13,15 +13,15 @@ Built as a **Google Apps Script web app bound to a Google Sheet**, with one LLM 
 ## How it works
 
 ```
-index.html ──google.script.run──> Code.js
+index.html ──fetch / google.script.run──> Code.js
   startChat(id)   roster lookup (Roster tab) → session in CacheService (6 h) → greeting
   chat(id, msg)
-    1. keyword check: POSH / distress / exit (precise regex lists)
-    2. POSH or distress → fixed template with the IC / EAP route (no AI call)
-       otherwise        → one LLM call → JSON {topic, flag, answer_type, sections, reply}
-                          (if the AI flags POSH/distress, the template replaces its reply)
-    3. guard: every number in the reply must exist in the pack, the profile or the user's words;
-       every cited section must exist. Fail → one retry → still fail → safe "can't answer" reply
+    1. self-harm keywords (first person) → distress template, no AI call
+    2. one LLM call → JSON {topic, category, also, answer_type, sections, reply}
+       guard: every number must exist in the pack, the profile or the user's words; every cited
+       section must exist. Fail → one retry → still fail → safe "can't answer" reply
+    3. category → route (src/routes.js): harassment → POSH template · distress → EAP template ·
+       exit / other employee's data / prompt injection / policy → the AI reply
     4. code adds "Source: Separation §5.1" and, for not-covered/partial/refused, the HRBP's name + email
     5. Log tab (2 rows per message) · Flags tab (1 row per flag type per chat) · email for POSH/distress
 ```
@@ -31,7 +31,8 @@ index.html ──google.script.run──> Code.js
 | `src/Code.js` | Server: web app, decision flow, guards, templates, LLM call, logging, Sheet setup |
 | `src/index.html` | Chat page (Employee ID screen → chat). Uses `google.script.run` when served by Apps Script, `fetch` → `doPost` anywhere else |
 | `docs/index.html` | Copy of `src/index.html` served by GitHub Pages (`cp src/index.html docs/` after edits) |
-| `src/tests.js` | 33 test cases (6 samples + policy traps) and the `runTests` Sheet menu item |
+| `src/routes.js` | The six message categories (distress, harassment, exit, other employee's data, prompt injection, policy), the POSH and distress templates, and the self-harm keyword list |
+| `src/tests.js` | 38 test cases (6 samples + policy traps) and the `runTests` Sheet menu item |
 | `src/policy.js` | The policy pack, verbatim, as a string constant |
 | `src/roster.js` | The roster CSV, verbatim — only used by Setup to fill the Roster tab |
 | `src/appsscript.json` | Manifest: time zone, scopes, web app settings |
@@ -69,7 +70,7 @@ Optional Script Property: `OPENROUTER_MODEL` (default `openai/gpt-6-luna`).
 - **In the Sheet:** HR Bot → Run tests. Writes every case, the bot's actual reply, flags and PASS/FAIL to the `Results` tab. Test chats are not written to Log/Flags and send no email.
 - **Locally:** create `.env` with `OPENROUTER_API_KEY=...`, then
   ```bash
-  node local/harness.js test            # all 33 cases
+  node local/harness.js test            # all 38 cases
   node local/harness.js test S1 T05     # selected cases
   node local/harness.js chat KV1003     # chat in the terminal
   ```

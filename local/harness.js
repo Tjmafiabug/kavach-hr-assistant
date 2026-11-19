@@ -52,19 +52,7 @@ ctx.findEmployee_ = id => {
 };
 
 const [mode, ...args] = process.argv.slice(2);
-const suite = () => require('./cases500.js')(rows.map(r => Object.fromEntries(head.map((k, i) => [k, r[i]]))));
-if (mode === 'count') { // node local/harness.js count
-  const { cases, counters } = suite();
-  console.log(counters, 'total', cases.length);
-} else if (mode === 'suite') { // node local/harness.js suite <shard> <shards> [ids...] — one JSON line per case (used by run500.js)
-  const [k, n, ...ids] = args;
-  suite().cases.filter((c, i) => i % Number(n) === Number(k) && (!ids.length || ids.includes(c.id))).forEach(c => {
-    const t = Date.now();
-    const [r] = ctx.runTestCases_([c]);
-    process.stdout.write(JSON.stringify({ id: c.id, cat: c.cat, emp: c.emp, turns: c.turns, why: c.why, expected: r[3], reply: r[4],
-      type: r[5], flags: r[6], route: r[9], expectedRoute: c.route ? [].concat(c.route) : null, pass: r[7] === 'PASS', fail: r[8], ms: Date.now() - t }) + '\n');
-  });
-} else if (mode === 'md') { // markdown results table, e.g. node local/harness.js md S1 S2 S3 S4 S5 S6 > docs/sample-results.md
+if (mode === 'md') { // markdown results table, e.g. node local/harness.js md S1 S2 S3 S4 S5 S6 > docs/sample-results.md
   const cases = ctx.__.TEST_CASES.filter(c => !args.length || args.includes(c.id));
   const cell = s => String(s).replace(/\|/g, '\\|').replace(/\n+/g, '<br>');
   console.log('| # | Employee | Question | Bot reply (actual) | Type | Flags | Result |\n|---|---|---|---|---|---|---|');

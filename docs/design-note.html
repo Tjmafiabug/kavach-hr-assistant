@@ -17,23 +17,23 @@
 </style></head>
 <body>
 <h1>Kavach HR Assistant — Design Note</h1>
-<p class="sub">Google Apps Script web app + one Google Sheet · one LLM call per message via OpenRouter (<code>openai/gpt-6-luna</code>, strict JSON) · 33 automated test cases, all passing</p>
+<p class="sub">Google Apps Script web app + one Google Sheet · one LLM call per message via OpenRouter (<code>openai/gpt-6-luna</code>, strict JSON) · 38 automated test cases, all passing (plus a 1,355-case stress run during development: 98.3%)</p>
 
 <h2>1. How it decides: answer, ask, or "I don't know"</h2>
-<p>The Employee ID is looked up in the Roster tab; the model sees only that person's band, grade, role type, city, probation status and HRBP name (never phone/email, never the roster). The <b>whole policy pack (~1,800 tokens) is in every prompt</b> — no RAG. The model must return JSON in a fixed order: <code>topic → flag → answer_type → sections → reply</code>, so it classifies and decides <i>answered / partial / ask_followup / not_covered / refused</i> before writing. Prompt rules come from traps in the pack: probation overrides band for notice; check coverage before asking (an intern asking about hotels gets "not covered", not "which city?"); ask <b>one</b> short question when an answer depends on missing data (city for hotel limit, band for a guest, distance for Band A flights); use the tier list literally; never compute new numbers.</p>
+<p>The Employee ID is looked up in the Roster tab; the model sees only that person's band, grade, role type, city, probation status and HRBP name (never phone/email, never the roster). The <b>whole policy pack (~1,800 tokens) is in every prompt</b> — no RAG. The model must return JSON in a fixed order: <code>topic → category → answer_type → sections → reply</code>, so it classifies and decides <i>answered / partial / ask_followup / not_covered / refused</i> before writing. Prompt rules come from traps in the pack: probation overrides band for notice; check coverage before asking (an intern asking about hotels gets "not covered", not "which city?"); ask <b>one</b> short question when an answer depends on missing data (city for hotel limit, band for a guest, distance for Band A flights); use the tier list literally; never compute new numbers.</p>
 <p><b>Code, not the model, enforces the outcome:</b> (1) a <b>number guard</b> rejects any reply containing a number not found in the pack, the profile or the employee's own words, and any section that doesn't exist → one retry with the problem stated → else a safe "I can't answer that reliably" reply; (2) a <b>footer</b> adds "Source: Separation §5.1" for answers, and the employee's <b>own HRBP name + email</b> for not_covered / partial / refused (guests get the HR Helpdesk). The model can't omit or invent the contact.</p>
 
 <div class="cols"><div>
 <h2>2. Sensitive messages</h2>
-<p><b>Two layers.</b> High-precision keyword lists (English, Hinglish, Hindi) run first; the model's <code>flag</code> is the recall layer for indirect wording ("nothing matters anymore"). Words that cause false alarms are never used alone ("leave khatam ho gayi", lowercase "posh hotel").</p>
+<p><b>The model classifies, code decides.</b> Every message gets one of six categories (distress, harassment, exit, other employee's data, prompt injection, policy); a table in code maps each to its reply, flag and alert. The model reads meaning, so idioms don't fire ("deadline is killing me", "posh hotel", "leave khatam ho gayi", "Suicide Squad dekhi"). <b>Safety layer:</b> first-person self-harm phrases ("want to die", "jeena nahi", "suicide karna") skip the model and always get the distress template; harassment keywords take over only if the model call fails.</p>
 <ul>
-<li><b>POSH, bullying, intimidation</b> → fixed template, no AI: IC email, 3-month window (+3), confidentiality, no retaliation, HRBP support (§4.2–4.5). Severity high: Flags row + email.</li>
-<li><b>Distress</b> → fixed, caring template: Mann Sahayak EAP 1800-000-4357 / email, emergency services (§6.1–6.2), HRBP; Hinglish line. A repeat message gets a short version. Severity urgent: Flags row + email.</li>
+<li><b>Harassment</b> (sexual, bullying, abuse, discrimination, retaliation) → fixed template, no AI: IC email, 3-month window (+3), confidentiality, no retaliation, HRBP support (§4.2–4.5). Severity high: Flags row + email.</li>
+<li><b>Distress or a wellbeing concern</b> → fixed, caring template: Mann Sahayak EAP 1800-000-4357 / email, emergency services (§6.1–6.2), HRBP; Hinglish line. A repeat message gets a short version. Severity urgent: Flags row + email.</li>
 <li><b>Exit intent</b> → normal answer (e.g. notice period) + Flags row for the HRBP.</li>
 <li><b>Other employee's data / prompt injection</b> → refusal + low-severity flag.</li>
 </ul>
 <p>Templates work even if the LLM is down. One Flags row per type per chat; the <b>HRBP view</b> tab lists open flags by HRBP.</p>
-<p><b>What could go wrong:</b> subtle distress missed by both layers; over-flagging (a neutral POSH-policy question gets the template — accepted trade-off); a typed ID can be spoofed, so a flag could name the wrong person; the alert email contains the message excerpt — in production it should go only to the IC/HRBP.</p>
+<p><b>What could go wrong:</b> subtle distress missed by both layers; the model misreads a borderline message (asking about POSH is answered normally, reporting it gets the template — tested both ways); a typed ID can be spoofed, so a flag could name the wrong person; the alert email contains the message excerpt — in production it should go only to the IC/HRBP.</p>
 
 <h2>3. Chose not to build</h2>
 <ul>
@@ -41,6 +41,7 @@
 <li><b>Real login</b> — brief uses the ID as a stand-in. Production: Google sign-in on the company domain, email → ID.</li>
 <li><b>Leave balances</b> — not in the pack; the bot gives entitlement + "check PeopleHub".</li>
 <li><b>WhatsApp/Telegram, streaming, admin UI</b> — channel isn't scored; the Sheet is the admin UI.</li>
+<li><b>Follow-up questionnaires and extra case types</b> (threats, whistleblowing, grievances) — built and tested, then cut: beyond the brief, and a questionnaire can swallow the employee's next question.</li>
 </ul>
 </div><div>
 <h2>4. Day one with 3,000 employees — what breaks first</h2>
