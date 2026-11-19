@@ -31,7 +31,7 @@ index.html ──google.script.run──> Code.js
 | `src/Code.js` | Server: web app, decision flow, guards, templates, LLM call, logging, Sheet setup |
 | `src/index.html` | Chat page (Employee ID screen → chat). Uses `google.script.run` when served by Apps Script, `fetch` → `doPost` anywhere else |
 | `docs/index.html` | Copy of `src/index.html` served by GitHub Pages (`cp src/index.html docs/` after edits) |
-| `src/tests.js` | 30 test cases (6 samples + policy traps) and the `runTests` Sheet menu item |
+| `src/tests.js` | 33 test cases (6 samples + policy traps) and the `runTests` Sheet menu item |
 | `src/policy.js` | The policy pack, verbatim, as a string constant |
 | `src/roster.js` | The roster CSV, verbatim — only used by Setup to fill the Roster tab |
 | `src/appsscript.json` | Manifest: time zone, scopes, web app settings |
@@ -69,7 +69,7 @@ Optional Script Property: `OPENROUTER_MODEL` (default `openai/gpt-6-luna`).
 - **In the Sheet:** HR Bot → Run tests. Writes every case, the bot's actual reply, flags and PASS/FAIL to the `Results` tab. Test chats are not written to Log/Flags and send no email.
 - **Locally:** create `.env` with `OPENROUTER_API_KEY=...`, then
   ```bash
-  node local/harness.js test            # all 30 cases
+  node local/harness.js test            # all 33 cases
   node local/harness.js test S1 T05     # selected cases
   node local/harness.js chat KV1003     # chat in the terminal
   ```
