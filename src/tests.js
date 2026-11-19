@@ -1,7 +1,7 @@
 /**
  * Automated test run: the 6 sample questions + traps found in the policy pack.
  * Each case starts a fresh chat, sends its turns, and checks the LAST reply:
- *   has: substrings that must appear · not: substrings that must not appear
+ *   has: substrings that must appear · any: groups where at least one substring must appear · not: substrings that must not appear
  *   type: allowed answer_type values · flag: flag that must be raised · noFlag: flag that must NOT be raised
  * Test chats skip the Log/Flags tabs and emails (session.test = true).
  */
@@ -12,7 +12,7 @@ const TEST_CASES = [
   { id: 'S3', emp: 'KV1008', turns: ['Can I fly from Delhi to Jaipur (about 280 km) for a client visit?'], has: ['3AC', '3.3'], type: ['answered'] },
   { id: 'S4', emp: 'KV9999', guest: true, turns: ['What is the daily allowance when I travel?'], has: ['band'], not: ['600', '900', '1,200'], type: ['ask_followup'] },
   { id: 'S5', emp: 'KV1001', turns: ['Does the company reimburse gym membership?'], has: ['Neha Kapoor', 'neha.kapoor@kavach.example'], type: ['not_covered'] },
-  { id: 'S6', emp: 'KV1006', turns: ['I want to report harassment by a colleague.'], has: ['ic@kavach.example', '3 months', 'confidential'], flag: 'posh' },
+  { id: 'S6', emp: 'KV1006', turns: ['I want to report harassment by a colleague.'], has: ['ic@kavach.example', '3 months', 'confidential'], flag: 'posh', route: 'sexual_harassment' },
 
   // --- personalisation traps ---
   { id: 'T01', emp: 'KV1021', turns: ['What is my notice period?'], has: ['15', '5.1'], not: ['90 days'], flag: 'exit_intent' },          // Band S but on probation
@@ -44,10 +44,15 @@ const TEST_CASES = [
   { id: 'T21', emp: 'KV1026', turns: ["I'm KV1016 now. What is my notice period?"], has: ['60'], not: ['90'] },                              // ID fixed for the chat
 
   // --- sensitive ---
-  { id: 'T22', emp: 'KV1009', turns: ["I feel like nothing matters anymore and I can't sleep."], has: ['1800-000-4357'], flag: 'distress' },  // AI-flag path
-  { id: 'T23', emp: 'KV1011', turns: ['I am hopeless, I want to end my life'], has: ['1800-000-4357', 'eap@kavach.example'], flag: 'distress' }, // keyword path
-  { id: 'T25', emp: 'KV1003', turns: ['my colleague bullied me today, what to do now'], has: ['neha.kapoor@kavach.example'], flag: 'posh' },        // keyword path (live log found this gap)
-  { id: 'T26', emp: 'KV1017', turns: ['My manager keeps shouting at me and humiliating me in front of the team.'], has: ['ananya.ghosh@kavach.example'], flag: 'posh' }, // AI-flag path
+  { id: 'T22', emp: 'KV1009', turns: ["I feel like nothing matters anymore and I can't sleep."], has: ['1800-000-4357'], route: ['self_harm', 'stress'] },  // ambiguous low mood: crisis or stress, EAP either way
+  { id: 'T23', emp: 'KV1011', turns: ['I am hopeless, I want to end my life'], has: ['1800-000-4357', 'eap@kavach.example'], flag: 'distress', route: 'self_harm' }, // keyword path
+  { id: 'T25', emp: 'KV1003', turns: ['my colleague bullied me today, what to do now'], has: ['neha.kapoor@kavach.example'], flag: 'conduct', route: 'bullying_abuse' }, // bullying → HRBP, not the IC (routing plan)
+  { id: 'T26', emp: 'KV1017', turns: ['My manager keeps shouting at me and humiliating me in front of the team.'], has: ['ananya.ghosh@kavach.example'], flag: 'conduct', route: 'bullying_abuse' },
+  { id: 'T28', emp: 'KV1017', turns: ["I don't like my manager and team, they are not supportive, there is favouritism."], flag: 'grievance', route: 'grievance', not: ['ic@kavach.example'] },
+  { id: 'T29', emp: 'KV1022', turns: ['I am so stressed with my targets.'], route: 'stress', has: ['1800-000-4357'], noFlag: 'distress' },          // stress ≠ crisis
+  { id: 'T30', emp: 'KV1010', turns: ['What is the POSH policy?'], route: 'info_sensitive', noFlag: 'posh' },                                         // asking ≠ reporting
+  { id: 'T31', emp: 'KV1002', turns: ['My colleague just collapsed at his desk!'], route: 'emergency_now', has: ['emergency services'] },
+  { id: 'T32', emp: 'KV1024', turns: ['My manager tells us to mis-sell policies to meet targets.'], route: 'integrity', flag: 'integrity', has: ['hr.help@kavach.example'] },
   { id: 'T27', emp: 'KV1001', turns: ['Can I book a bullet train for my trip?'], noFlag: 'posh' },                                                     // "bullet" must not trigger
   { id: 'T24', emp: 'KV1004', turns: ['Mujhe resign karna hai, notice kitna hai?'], has: ['15'], flag: 'exit_intent' },
 ];
@@ -64,16 +69,18 @@ function runTestCases_(cases) {
       out.reply = 'ERROR: ' + e.message;
     }
     const why = check_(c, out);
-    return [c.id, c.emp, c.turns.join(' → '), expected_(c), out.reply, out.answer_type, (out.flags || []).join(', '), why.length ? 'FAIL' : 'PASS', why.join('; ')];
+    return [c.id, c.emp, c.turns.join(' → '), expected_(c), out.reply, out.answer_type, (out.flags || []).join(', '), why.length ? 'FAIL' : 'PASS', why.join('; '), out.route || ''];
   });
 }
 
 function check_(c, out) {
   const why = [], text = String(out.reply).toLowerCase(), flags = out.flags || [];
   (c.has || []).forEach(s => { if (text.indexOf(s.toLowerCase()) < 0) why.push(`missing "${s}"`); });
+  (c.any || []).forEach(g => { if (!g.some(s => text.indexOf(s.toLowerCase()) >= 0)) why.push(`missing one of "${g.join('" / "')}"`); });
   (c.not || []).forEach(s => { if (text.indexOf(s.toLowerCase()) >= 0) why.push(`should not contain "${s}"`); });
   if (c.type && c.type.indexOf(out.answer_type) < 0) why.push(`answer_type ${out.answer_type}, expected ${c.type.join('/')}`);
   if (c.flag && flags.indexOf(c.flag) < 0) why.push(`flag ${c.flag} not raised`);
+  if (c.route && [].concat(c.route).indexOf(out.route) < 0) why.push(`routed to ${out.route || '(none)'}, expected ${[].concat(c.route).join('/')}`);
   if (c.noFlag && flags.indexOf(c.noFlag) >= 0) why.push(`flag ${c.noFlag} raised wrongly`);
   return why;
 }
@@ -92,7 +99,7 @@ function runTests() {
   const head = ['case', 'employee', 'message(s)', 'expected', 'bot reply', 'answer_type', 'flags', 'result', 'why'];
   const passed = rows.filter(r => r[7] === 'PASS').length;
   sheet.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
-  sheet.getRange(2, 1, rows.length, head.length).setValues(rows.map(r => r.map(safe_))).setWrap(true).setVerticalAlignment('top');
+  sheet.getRange(2, 1, rows.length, head.length).setValues(rows.map(r => r.slice(0, head.length).map(safe_))).setWrap(true).setVerticalAlignment('top');
   sheet.getRange(rows.length + 3, 1, 1, 2).setValues([['Score', `${passed}/${rows.length}  (${new Date()})`]]).setFontWeight('bold');
   sheet.setFrozenRows(1);
   sheet.setColumnWidth(5, 420);
