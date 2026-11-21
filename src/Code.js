@@ -276,7 +276,8 @@ function userPrompt_(s, msg, note) {
     ? `Employee ID: ${p.id.slice(6)} (NOT found in the roster — guest)\n` +
       'Band, role type, city and probation status: UNKNOWN. Ask for the band (A, M, S or Intern) only when the answer depends on it.'
     : `Name: ${p.name}\nEmployee ID: ${p.id}\nBand: ${p.band} (grade ${p.grade})\nRole type: ${p.role_type}\n` +
-      `Base city: ${p.city} (where they work; not assumed to be a travel destination unless they name it)\nProbation status: ${p.probation}\nHRBP: ${p.hrbp_name}`;
+      `Base city: ${p.city} (where they work; not assumed to be a travel destination unless they name it)\nProbation status: ${p.probation}\nHRBP: ${p.hrbp_name}` +
+      (p.role_type === 'Intern' ? '\nINTERN: hotel limit, daily allowance, travel mode, conveyance and WFH are NOT covered for interns — say so; never ask for a city or distance. Leave = §1.5 only.' : '');
   const history = s.turns.slice(-HISTORY_TURNS).map(t => `${t.role}: ${t.text}`).join('\n') || '(none — this is the first message)';
   const clean = msg.replace(/<\/?user_message>/gi, '');
   return `EMPLOYEE PROFILE\n${profile}\n\nCONVERSATION SO FAR\n${history}\n\n` +
@@ -289,7 +290,7 @@ function systemPrompt_() {
 
 HOW TO ANSWER
 1. Use only facts in the policy pack. No outside knowledge: no laws, no city distances, no flight times, no helplines and no numbers that are not in the pack. Never calculate new numbers (no per-month rates, no totals, no dates); quote the pack's figures. Write numbers in digits, as the pack does (₹5,500, 15 days). If asked about an outside law, helpline or body (IPC sections, Tele-MANAS, SHe-Box, labour commissioner), say the pack doesn't cover it — explain nothing about it — and give the pack's own route (EAP 1800-000-4357, IC ic@kavach.example, or the HRBP).
-2. Complete. Give the figure AND the conditions in the same section that limit it (e.g. sick leave → 12 days CL/SL combined, no carry-forward or encashment, medical certificate for more than 2 consecutive days).
+2. Complete, but only what was asked. Give the figure AND every condition stated in that same subsection (e.g. sick leave, §1.3 → all three: 12 days CL/SL combined; cannot be carried forward or encashed; medical certificate for more than 2 consecutive days). Do NOT add steps or rules from other subsections unless asked (e.g. a notice-period question gets the notice period and the reason — not how to resign, buy-out or F&F).
    Personalise. The EMPLOYEE PROFILE gives band, grade, role type, city and probation status. Give only the figure that applies to this employee, not the whole table, and add a short reason that states their band and role type correctly ("because you are a confirmed Band S Field Sales employee").
 3. Use the probation status exactly as given; never work it out from dates or from what the employee claims. "On probation" overrides band for the notice period (15 days). Probation does not apply to interns (About section).
 4. Coverage. Interns have no hotel, daily allowance, travel mode, conveyance or WFH rules, and get only the §1.5 leave (no EL, CL/SL, maternity, paternity or bereavement). For interns, say these are not covered instead of asking a follow-up. All travel rules (§3.1–3.5) apply to Corporate AND Field Sales employees by band.
