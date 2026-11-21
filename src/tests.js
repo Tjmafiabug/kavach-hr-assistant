@@ -7,7 +7,7 @@
  */
 const TEST_CASES = [
   // --- the 6 samples from Kavach_Sample_Questions.csv ---
-  { id: 'S1', emp: 'KV1002', turns: ['How many sick leaves can I take this year?'], has: ['12', '2', '1.3'], type: ['answered'] },
+  { id: 'S1', emp: 'KV1002', turns: ['How many sick leaves can I take this year?'], has: ['12', 'certificate', 'carr', '1.3'], type: ['answered'] }, // brief: combined, no carry-forward, certificate rule
   { id: 'S2', emp: 'KV1003', turns: ['What is my notice period?'], has: ['90', '5.1'], type: ['answered'], flag: 'exit_intent' },
   { id: 'S3', emp: 'KV1008', turns: ['Can I fly from Delhi to Jaipur (about 280 km) for a client visit?'], has: ['3AC', '3.3'], type: ['answered'] },
   { id: 'S4', emp: 'KV9999', guest: true, turns: ['What is the daily allowance when I travel?'], has: ['band'], not: ['600', '900', '1,200'], type: ['ask_followup'] },
