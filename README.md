@@ -17,10 +17,10 @@ index.html ──fetch / google.script.run──> Code.js
   startChat(id)   roster lookup (Roster tab) → session in CacheService (6 h) → greeting
   chat(id, msg)
     1. self-harm keywords (first person) → distress template, no AI call
-    2. one LLM call → JSON {topic, category, also, answer_type, sections, reply}
+    2. one LLM call → JSON {topic, category, answer_type, sections, reply}
        guard: every number must exist in the pack, the profile or the user's words; every cited
        section must exist. Fail → one retry → still fail → safe "can't answer" reply
-    3. category → route (src/routes.js): harassment → POSH template · distress → EAP template ·
+    3. category: harassment → POSH template · distress → EAP template ·
        exit / other employee's data / prompt injection / policy → the AI reply
     4. code adds "Source: Separation §5.1" and, for not-covered/partial/refused, the HRBP's name + email
     5. Log tab (2 rows per message) · Flags tab (1 row per flag type per chat) · email for POSH/distress
@@ -28,10 +28,9 @@ index.html ──fetch / google.script.run──> Code.js
 
 | File | What it is |
 |---|---|
-| `src/Code.js` | Server: web app, decision flow, guards, templates, LLM call, logging, Sheet setup |
+| `src/Code.js` | Server: web app, the six message categories, POSH/distress templates, guards, LLM call, logging, Sheet setup |
 | `src/index.html` | Chat page (Employee ID screen → chat). Uses `google.script.run` when served by Apps Script, `fetch` → `doPost` anywhere else |
 | `docs/index.html` | Copy of `src/index.html` served by GitHub Pages (`cp src/index.html docs/` after edits) |
-| `src/routes.js` | The six message categories (distress, harassment, exit, other employee's data, prompt injection, policy), the POSH and distress templates, and the self-harm keyword list |
 | `src/tests.js` | 38 test cases (6 samples + policy traps) and the `runTests` Sheet menu item |
 | `src/policy.js` | The policy pack, verbatim, as a string constant |
 | `src/roster.js` | The roster CSV, verbatim — only used by Setup to fill the Roster tab |

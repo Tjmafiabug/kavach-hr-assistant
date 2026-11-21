@@ -40,8 +40,8 @@ const ctx = {
   },
 };
 vm.createContext(ctx);
-// Code.js before routes.js on purpose: proves Apps Script file load order doesn't matter.
-const src = ['policy.js', 'roster.js', 'Code.js', 'routes.js', 'tests.js'].map(f => fs.readFileSync(path.join(root, 'src', f), 'utf8')).join('\n');
+
+const src = ['policy.js', 'roster.js', 'Code.js', 'tests.js'].map(f => fs.readFileSync(path.join(root, 'src', f), 'utf8')).join('\n');
 vm.runInContext(src + '\n;this.__ = { TEST_CASES, ROSTER_CSV };', ctx);
 
 // Roster lookup from the CSV instead of the Sheet tab.
@@ -52,15 +52,7 @@ ctx.findEmployee_ = id => {
 };
 
 const [mode, ...args] = process.argv.slice(2);
-if (mode === 'md') { // markdown results table, e.g. node local/harness.js md S1 S2 S3 S4 S5 S6 > docs/sample-results.md
-  const cases = ctx.__.TEST_CASES.filter(c => !args.length || args.includes(c.id));
-  const cell = s => String(s).replace(/\|/g, '\\|').replace(/\n+/g, '<br>');
-  console.log('| # | Employee | Question | Bot reply (actual) | Type | Flags | Result |\n|---|---|---|---|---|---|---|');
-  for (const c of cases) {
-    const [r] = ctx.runTestCases_([c]);
-    console.log(`| ${r[0]} | ${r[1]} | ${cell(r[2])} | ${cell(r[4])} | ${r[5]} | ${r[6] || '—'} | ${r[7] === 'PASS' ? '✅' : '❌ ' + cell(r[8])} |`);
-  }
-} else if (mode === 'test') {
+if (mode === 'test') {
   const cases = args.length ? ctx.__.TEST_CASES.filter(c => args.includes(c.id)) : ctx.__.TEST_CASES;
   let pass = 0;
   for (const c of cases) {
